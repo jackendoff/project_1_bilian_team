@@ -1,81 +1,140 @@
 import requests
 import random
 
-def get_coin_depth(coin_name, level):
-    '''
-    获取订单簿数据
-    :param coin_name:币对名称（str）
-    :param level:订单深度，有（str）'L20','L150','full'
-    :return:返回订单深度字典
-    {
-  "status":0,
-  "data":{
-    "type": "depth.L20.ethbtc",
-    "ts": 1523619211000,
-    "seq": 120,
-    "bids": [0.000100000, 1.000000000, 0.000010000, 1.000000000],奇数是价格
-    "asks": [1.000000000, 1.000000000]
-  }
-}
-    '''
-    # url = 'https://api.fcoin.com/v2/public/server-time'
-    url = 'https://api.fcoin.com/v2/market/depth/'+level+'/'+coin_name
-    data = requests.get(url)
-    result = data.content.decode()
-    result_dict = eval(result)
-    return result_dict
 
+class CoinData(object):
 
-def  transaction_space(depth_dict):
-    '''
-    获取订单成交空间
-    :param depth_dict:订单簿列表
-    :return:trans_space_price:返回成交空间 (float)
-    '''
-    max_buy_price = depth_dict['data']['bids'][0]
-    max_buy_amount = depth_dict['data']['bids'][1]
+    def __init__(self, coin_name, level=None, depth_dict=None, me_space=None, min_order=None, trans_space_price=None):
 
-    min_asks_price = depth_dict['data']['asks'][0]
-    min_asks_amount = depth_dict['data']['asks'][1]
+        self.coin_name = coin_name
+        self.order_price = None
 
-    trans_space_price = min_asks_price - max_buy_price
-    # trans_space_amount = min_asks_amount - max_buy_amount
-    return trans_space_price
+        if level is None:
+            self.level = 'full'
+        else:
+            self.level = level
+        if depth_dict is None:
+            self.depth_dict = {}
+        else:
+            self.depth_dict = depth_dict
+        if me_space is None:
+            self.me_space = 1
+        else:
+            self.me_space = me_space
+        if min_order is None:
+            self.min_order = 1
+        else:
+            self.min_order = min_order
+        if trans_space_price is None:
+            self.trans_space_price = 1
+        else:
+            self.trans_space_price = trans_space_price
 
+    def get_coin_depth(self):
+        '''
+        获取订单簿数据
+        :param coin_name:币对名称（str）
+        :param level:订单深度，有（str）'L20','L150','full'
+        :return:返回订单深度字典
+        {
+      "status":0,
+      "data":{
+        "type": "depth.L20.ethbtc",
+        "ts": 1523619211000,
+        "seq": 120,
+        "bids": [0.000100000, 1.000000000, 0.000010000, 1.000000000],奇数是价格
+        "asks": [1.000000000, 1.000000000]
+            }
+        }
+        '''
+        # url = 'https://api.fcoin.com/v2/public/server-time'
+        url = 'https://api.fcoin.com/v2/market/depth/'+self.level+'/'+self.coin_name
+        data = requests.get(url)
+        result = data.content.decode()
+        result_dict = eval(result)
+        self.depth_dict = result_dict
+        print('depth_dict深度字典',self.depth_dict)
+        return result_dict
 
-def order_random(depth_dict):
-    '''
-    成交空间内随机下单价格
-    :param result_dict: 订单簿数据（dict）
-    :return: 返回生成的随机挂单价格（）
-    '''
-    max_buy_price = depth_dict['data']['bids'][0]
-    min_asks_price = depth_dict['data']['asks'][0]
-    order_price = random.uniform(max_buy_price, min_asks_price)
-    print(max_buy_price, min_asks_price)
-    return order_price
+    def transaction_space(self,depth_dict=None):
+        '''
+        获取订单成交空间
+        :param depth_dict:订单簿列表
+        :return:trans_space_price:返回成交空间 (float)
+        '''
+        if self.depth_dict is None:
+            print('depth_dict is None')
+        if depth_dict is not None:
+            self.depth_dict = depth_dict
+        max_buy_price = self.depth_dict['data']['bids'][0]
+        max_buy_amount = self.depth_dict['data']['bids'][1]
 
+        min_asks_price = self.depth_dict['data']['asks'][0]
+        min_asks_amount = self.depth_dict['data']['asks'][1]
 
-def judge_trans_space(me_space, trans_space_price):
-    '''
-    判断成交空间过小，且则吃小压单，（大压单提示）
-    :param me_space: 自定义成交空间大小（）
-    :param trans_space_price:
-    :return:
-    '''
-    pass
+        trans_space_price = min_asks_price - max_buy_price
+        # trans_space_amount = min_asks_amount - max_buy_amount
+        self.trans_space_price = trans_space_price
+        print('trans_space_price订单空间',self.trans_space_price)
+        return trans_space_price
+
+    def order_random(self):
+        '''
+        成交空间内随机下单价格
+        :param result_dict: 订单簿数据（dict）
+        :return: 返回生成的随机挂单价格（）
+        '''
+        max_buy_price = self.depth_dict['data']['bids'][0]
+        min_asks_price = self.depth_dict['data']['asks'][0]
+        order_price = random.uniform(max_buy_price, min_asks_price)
+        # print(max_buy_price, min_asks_price)
+        self.order_price = order_price
+        print('order_price随即下单价格',self.order_price)
+        return order_price
+
+    def judge_trans_space(self, me_space=None, min_order=None):
+        '''
+        判断成交空间过小，则吃小压单，（大压单提示）
+        :param me_space: 自定义成交空间大小（int）
+        :param min_order: 自定义小单数量（int）
+        :param depth_dict: 深度数据（dict）
+        :param trans_space_price:
+        :return:
+        '''
+        # 当成交空间过小，判断压单数量（min_asks_amount,max_buy_amount）
+        if me_space is not None:
+            self.me_space = me_space
+        if min_order is not None:
+            self.min_order = min_order
+        # i = 0
+        while self.trans_space_price < self.me_space:
+            if self.depth_dict['data']['bids'][1] < self.min_order:
+                print('eating')
+                depth_dict = self.get_coin_depth()
+                self.trans_space_price = self.transaction_space(depth_dict)
+                continue
+                pass
+                # 吃单
+            if self.depth_dict['data']['asks'][3] < self.min_order:
+                print('eating')
+                depth_dict = self.get_coin_depth()
+                self.trans_space_price = self.transaction_space(depth_dict)
+                pass
+                # 吃单
+            depth_dict = self.get_coin_depth()
+            self.trans_space_price = self.transaction_space(depth_dict)
+
+        pass
 
 
 if __name__ == '__main__':
     coin_name = 'dageth'
     level = ['L20', 'L150', 'full']
 
-    # 获取dag/eth订单簿
-    data_dict = get_coin_depth(coin_name, level[2])
-    # print(data_dict,type(data_dict))
-    # 获取成交价格空间
-    trans_space_price = transaction_space(data_dict)
-    print(trans_space_price,type(trans_space_price))
-    # 获取随机下单价格
-    order_price = order_random(data_dict)
-    print(order_price)
+    coin = CoinData(coin_name,level[0])
+    dara1 = coin.get_coin_depth()
+    dara2 = coin.transaction_space()
+    dara3 = coin.order_random()
+    print(dara1, dara2, dara3)
+    coin.judge_trans_space(me_space=4e-05, min_order=200000)
+
