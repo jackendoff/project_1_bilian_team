@@ -158,6 +158,7 @@ class CoinData(object):
         if min_order is not None:
             self.min_order = min_order
         # i = 0
+        print('self.depth_dict',self.depth_dict)
         while self.trans_space_price < self.me_space:
             if self.depth_dict['data']['bids'][1] < self.min_order:
                 print('eating bids')
@@ -166,7 +167,7 @@ class CoinData(object):
                 continue
                 pass
                 # 吃单
-            if self.depth_dict['data']['asks'][3] < self.min_order:
+            if self.depth_dict['data']['asks'][1] < self.min_order:
                 print('eating')
                 depth_dict = self.get_coin_depth()
                 self.trans_space_price = self.transaction_space(depth_dict)
@@ -191,9 +192,9 @@ if __name__ == '__main__':
     print('text_返回',price_list,type(price_list),'\n',amount_list,type(amount_list))
 
 
-    # dara1 = coin.get_coin_depth()
-    # dara2 = coin.transaction_space()
-    # dara3 = coin.order_random()
-    # print(dara1, dara2, dara3)
-    # coin.judge_trans_space(me_space=1, min_order=200000)
+    dara1 = coin.get_coin_depth()
+    dara2 = coin.transaction_space()
+    dara3 = coin.order_random()
+    print(dara1, dara2, dara3)
+    coin.judge_trans_space(me_space=1, min_order=200000)
 
